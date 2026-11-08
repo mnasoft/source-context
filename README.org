@@ -1,0 +1,185 @@
+#+TITLE: source-context
+#+AUTHOR: Микола
+#+LANGUAGE: ru
+
+* source-context
+
+Common Lisp утилита для формирования и интерактивного просмотра
+контекста проекта для LLM.
+
+Поддерживаются обычные файловые контексты и специализированные
+ASDF-контексты. По умолчанию исключаются каталоги =.git= и
+=generated=.
+
+* Зависимости
+
+- ASDF / UIOP
+- CL-PPCRE
+
+#+begin_src lisp
+(ql:quickload :cl-ppcre)
+#+end_src
+
+* Установка
+
+** ~/common-lisp
+
+Разместить проект в стандартном каталоге:
+
+#+begin_src shell
+cd ~/common-lisp
+git clone <repository-url> source-context
+#+end_src
+
+Загрузить:
+
+#+begin_src lisp
+(ql:quickload :source-context)
+#+end_src
+
+Проверить:
+
+#+begin_src lisp
+(asdf:find-system :source-context)
+#+end_src
+
+** Quicklisp local-projects
+
+Проект также можно разместить в
+=~/quicklisp/local-projects/source-context/= и загрузить:
+
+#+begin_src lisp
+(ql:quickload :source-context)
+#+end_src
+
+** Произвольный каталог
+
+Для дерева =~/local-projects/= создать файл:
+
+#+begin_example
+~/.config/common-lisp/source-registry.conf.d/50-local-projects.conf
+#+end_example
+
+с содержимым:
+
+#+begin_src lisp
+(:tree "~/local-projects/")
+#+end_src
+
+После изменения registry в работающем Lisp:
+
+#+begin_src lisp
+(asdf:clear-source-registry)
+#+end_src
+
+* Обычный контекст
+
+#+begin_src lisp
+  (defparameter *ctx*
+    (source-context:make-context
+     #p"~/quicklisp/local-projects/LLM/source-context/")) 
+
+  (source-context:source-context
+   ,*ctx*
+   :regexp "\\.(lisp|asd|org)$")
+#+end_src
+
+Исключения можно задавать при создании:
+
+#+begin_src lisp
+(source-context:make-context
+ #p"~/common-lisp/acad/dxf/"
+ :exclude-directories '(".git" "generated" "build")
+ :exclude-files '("-generated\\.lisp$" "/test/"))
+#+end_src
+
+* ASDF context
+
+Для Common Lisp проектов предпочтителен ASDF-контекст:
+
+#+begin_src lisp
+  (defparameter *ctx*
+    (source-context:make-asdf-context "dxf"))
+
+  (defparameter *ctx*
+    (source-context:make-asdf-context "source-context"))
+
+#+end_src
+
+Сам =.asd= включается по умолчанию. Отключить его:
+
+#+begin_src lisp
+(source-context:make-asdf-context "dxf" :include-asd-p nil)
+#+end_src
+
+* Просмотр контекста
+
+Краткая сводка:
+
+#+begin_src lisp
+(source-context:context-summary *ctx*)
+#+end_src
+
+Список итоговых файлов:
+
+#+begin_src lisp
+(source-context:list-files *ctx*)
+#+end_src
+
+Дерево компонентов ASDF:
+
+#+begin_src lisp
+(source-context:list-components *ctx*)
+#+end_src
+
+Полный текст контекста:
+
+#+begin_src lisp
+(source-context:render-context *ctx*)
+#+end_src
+
+Получение строки:
+
+#+begin_src lisp
+(defparameter *context-text*
+  (source-context:context-string *ctx*))
+#+end_src
+
+* Изменение контекста
+
+#+begin_src lisp
+(source-context:add-file *ctx* #p"~/common-lisp/acad/dxf/README.org")
+(source-context:remove-file *ctx* #p"~/common-lisp/acad/dxf/test/test-dxf.lisp")
+(source-context:clear-context *ctx*)
+#+end_src
+
+* Сохранение
+
+#+begin_src lisp
+(source-context:write-context *ctx* #p"~/Downloads/dxf-context.txt")
+#+end_src
+
+* COMMENT Типичная работа в SLY
+
+#+begin_src lisp
+  (defparameter *ctx* (source-context:make-asdf-context "dxf"))
+  (source-context:context-summary *ctx*)
+  (source-context:list-components *ctx*)
+  (source-context:list-files *ctx*)
+  (source-context:render-context *ctx*)
+  (source-context:write-context *ctx* #p"~/Downloads/dxf-context.txt")
+  (source-context:write-context *ctx* #p"~/Downloads/source-context.txt")
+
+
+#+end_src
+
+* Структура проекта
+
+#+begin_example
+source-context/
+├── source-context.asd
+├── package.lisp
+├── context.lisp
+├── asdf-context.lisp
+└── README.org
+#+end_example
