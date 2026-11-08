@@ -7,9 +7,11 @@
 Common Lisp утилита для формирования и интерактивного просмотра
 контекста проекта для LLM.
 
-Поддерживаются обычные файловые контексты и специализированные
-ASDF-контексты. По умолчанию исключаются каталоги =.git= и
-=generated=.
+Поддерживаются:
+- обычные файловые контексты;
+- специализированные ASDF-контексты.
+  
+По умолчанию исключаются каталоги =.git= и =generated=.
 
 * Зависимости
 
@@ -21,23 +23,21 @@ ASDF-контексты. По умолчанию исключаются ката
 #+end_src
 
 * Установка
-
 ** ~/common-lisp
-
-Разместить проект в стандартном каталоге:
+*** Разместить проект в стандартном каталоге:
 
 #+begin_src shell
 cd ~/common-lisp
 git clone <repository-url> source-context
 #+end_src
 
-Загрузить:
+*** Загрузить:
 
 #+begin_src lisp
 (ql:quickload :source-context)
 #+end_src
 
-Проверить:
+*** Проверить:
 
 #+begin_src lisp
 (asdf:find-system :source-context)
@@ -95,30 +95,50 @@ git clone <repository-url> source-context
 
 * ASDF context
 
-Для Common Lisp проектов предпочтителен ASDF-контекст:
+** Для Common Lisp проектов предпочтителен ASDF-контекст:
+:var file="make-asdf-context.txt" dir="./generated/"
 
-#+begin_src lisp
-  (defparameter *ctx*
-    (source-context:make-asdf-context "dxf"))
-
+#+begin_src lisp 
   (defparameter *ctx*
     (source-context:make-asdf-context "source-context"))
-
+  *ctx*
 #+end_src
+
+#+RESULTS:
+: *CTX*
 
 Сам =.asd= включается по умолчанию. Отключить его:
 
 #+begin_src lisp
-(source-context:make-asdf-context "dxf" :include-asd-p nil)
+  (defparameter *ctx*
+    (source-context:make-asdf-context "source-context" :include-asd-p nil))
+  ,*ctx*
 #+end_src
+
+#+RESULTS:
+: #<SOURCE-CONTEXT:ASDF-CONTEXT 
+: System: source-context
+: Root: /home/mna/quicklisp/local-projects/LLM/source-context/
+: Files: 3, size: 10.23 KiB
+:   518 bytes  src/package.lisp
+:   5.54 KiB  src/context.lisp
+:   4.19 KiB  src/asdf-context.lisp {1225209AA3}>
 
 * Просмотр контекста
 
 Краткая сводка:
 
-#+begin_src lisp
-(source-context:context-summary *ctx*)
+#+begin_src lisp :var file="context-summary.txt" dir="./generated/" :results output
+  (source-context:context-summary *ctx*)
 #+end_src
+
+#+RESULTS:
+: ASDF context
+: System: source-context
+: Root:   /home/mna/quicklisp/local-projects/LLM/source-context/
+: ASD:    source-context.asd
+: Files:  3
+: Size:   10.23 KiB
 
 Список итоговых файлов:
 
@@ -159,27 +179,137 @@ git clone <repository-url> source-context
 (source-context:write-context *ctx* #p"~/Downloads/dxf-context.txt")
 #+end_src
 
-* COMMENT Типичная работа в SLY
+* Типичная работа в SLY
+
+** Сначала создаём контекст интересующей ASDF-системы:
 
 #+begin_src lisp
-  (defparameter *ctx* (source-context:make-asdf-context "dxf"))
-  (source-context:context-summary *ctx*)
+(defparameter *ctx*
+  (source-context:make-asdf-context "source-context"))
+#+end_src
+
+#+RESULTS:
+: *CTX*
+
+** Сам объект уже содержит краткую информацию о сформированном контексте:
+
+#+begin_src lisp
+*ctx*
+#+end_src
+
+#+RESULTS:
+: #<SOURCE-CONTEXT:ASDF-CONTEXT 
+: System: source-context
+: Root: /home/mna/quicklisp/local-projects/LLM/source-context/
+: Files: 4, size: 10.51 KiB
+:   285 bytes  source-context.asd
+:   518 bytes  src/package.lisp
+:   5.54 KiB  src/context.lisp
+:   4.19 KiB  src/asdf-context.lisp {121D0134F3}>
+
+** При необходимости можно отдельно посмотреть структуру ASDF-системы:
+
+#+begin_src lisp :results output
   (source-context:list-components *ctx*)
-  (source-context:list-files *ctx*)
-  (source-context:render-context *ctx*)
-  (source-context:write-context *ctx* #p"~/Downloads/dxf-context.txt")
-  (source-context:write-context *ctx* #p"~/Downloads/source-context.txt")
+#+end_src
+
+#+RESULTS:
+: [system] source-context
+:   [file] src/package  -> src/package.lisp
+:   [file] src/context  -> src/context.lisp
+:   [file] src/asdf-context  -> src/asdf-context.lisp
+
+** или итоговый список файлов:
+
+#+begin_src lisp :results output
+(source-context:list-files *ctx*)
+#+end_src
+
+#+RESULTS:
+:   1  ASD  source-context.asd
+:   2       src/package.lisp
+:   3       src/context.lisp
+:   4       src/asdf-context.lisp
+
+** Контекст можно интерактивно изменить:
+
+#+begin_src lisp
+(source-context:add-file *ctx* #p"README.org")
+
+(source-context:remove-file
+ *ctx*
+ #p"src/some-file.lisp")
+#+end_src
+
+#+RESULTS:
+: #<SOURCE-CONTEXT:ASDF-CONTEXT 
+: System: source-context
+: Root: /home/mna/quicklisp/local-projects/LLM/source-context/
+: Files: 5, size: 16.40 KiB
+:   285 bytes  source-context.asd
+:   518 bytes  src/package.lisp
+:   5.54 KiB  src/context.lisp
+:   4.19 KiB  src/asdf-context.lisp
+:   5.89 KiB  README.org {121D0134F3}>
+
+** После изменения достаточно снова вычислить:
+
+#+begin_src lisp 
+  ,*ctx*
+#+end_src
+
+#+RESULTS:
+: #<SOURCE-CONTEXT:ASDF-CONTEXT 
+: System: source-context
+: Root: /home/mna/quicklisp/local-projects/LLM/source-context/
+: Files: 5, size: 17.08 KiB
+:   285 bytes  source-context.asd
+:   518 bytes  src/package.lisp
+:   5.54 KiB  src/context.lisp
+:   4.19 KiB  src/asdf-context.lisp
+:   6.57 KiB  README.org {121D0134F3}>
 
 
+** Полный текст сформированного контекста можно проверить непосредственно из SLY:
+
+#+begin_src lisp :var file="source-context.txt" dir="./generated/" 
+  (let ((f-name (merge-pathnames file (pathname dir))))
+    (source-context:write-context *ctx* f-name)
+    (list (concatenate 'string "[[" (namestring f-name) "]]")))
+#+end_src
+
+#+begin_src lisp :results output
+(source-context:render-context *ctx*)
+#+end_src
+
+Когда состав контекста устраивает, сохраняем его:
+
+#+begin_src lisp
+(source-context:write-context
+ *ctx*
+ #p"~/Downloads/source-context.txt")
 #+end_src
 
 * Структура проекта
 
+#+begin_src sh :results output :exports results :dir .
+tree -a \
+     -I '.git|.#*|*.fasl|*.orig|*~'
+#+end_src
+
+#+RESULTS:
 #+begin_example
-source-context/
+.
+├── .gitignore
+├── README.org
+├── README.output
+│   └── source-context.txt
 ├── source-context.asd
-├── package.lisp
-├── context.lisp
-├── asdf-context.lisp
-└── README.org
+├── source-context.txt
+└── src
+    ├── asdf-context.lisp
+    ├── context.lisp
+    └── package.lisp
+
+3 directories, 8 files
 #+end_example
