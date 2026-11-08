@@ -81,15 +81,37 @@
 (defun context-size (context)
   (loop for file in (context-files context) sum (file-size file)))
 
+(defparameter *characters-per-token* 4.0
+  "Approximate number of characters per token.")
+
+(defun file-character-count (pathname)
+  (with-open-file (stream pathname
+                          :direction :input
+                          :external-format :utf-8)
+    (loop for character = (read-char stream nil nil)
+          while character
+          count 1)))
+
+(defun context-character-count (context)
+  (loop for file in (context-files context)
+        sum (file-character-count file)))
+
+(defun context-token-count (context)
+  (ceiling (/ (context-character-count context)
+              *characters-per-token*)))
+
 (defun format-byte-count (count)
   (cond ((>= count (* 1024 1024)) (format nil "~,2F MiB" (/ count 1024.0 1024.0)))
         ((>= count 1024) (format nil "~,2F KiB" (/ count 1024.0)))
         (t (format nil "~D bytes" count))))
 
 (defmethod context-summary ((context context) &optional (stream *standard-output*))
-  (format stream "Context~%Root:  ~A~%Files: ~D~%Size:  ~A~%"
-          (context-root context) (length (context-files context))
-          (format-byte-count (context-size context)))
+  (format stream "Context~%Root:   ~A~%Files:  ~D~%Size:   ~A~%Chars:  ~:D~%Tokens: ~:D (estimated)~%"
+          (context-root context)
+          (length (context-files context))
+          (format-byte-count (context-size context))
+          (context-character-count context)
+          (context-token-count context))
   (values))
 
 (defmethod render-file ((context context) file &optional (stream *standard-output*))
