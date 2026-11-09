@@ -1,26 +1,5 @@
 (in-package #:source-context)
 
-(defclass context ()
-  ((root :initarg :root :reader context-root)
-   (files :initarg :files :initform nil :accessor context-files)
-   (exclude-directories :initarg :exclude-directories :initform '(".git" "generated") :accessor context-exclude-directories)
-   (exclude-files :initarg :exclude-files :initform nil :accessor context-exclude-files)))
-
-(defmethod print-object ((context context) stream)
-  (print-unreadable-object (context stream :type t :identity t)
-    (format stream
-            "~A files: ~D size: ~A"
-            (context-root context)
-            (length (context-files context))
-            (format-byte-count
-             (context-size context)))))
-
-(defgeneric list-files (context &optional stream))
-(defgeneric list-components (context &optional stream))
-(defgeneric context-summary (context &optional stream))
-(defgeneric render-file (context file &optional stream))
-(defgeneric render-context (context &optional stream))
-
 (defun make-context (root &key (exclude-directories '(".git" "generated")) exclude-files)
   (make-instance 'context :root (uiop:ensure-directory-pathname (truename root))
                           :exclude-directories exclude-directories :exclude-files exclude-files))
@@ -66,14 +45,6 @@
     (walk (context-root context)))
   context)
 
-(defmethod list-files ((context context) &optional (stream *standard-output*))
-  (loop for file in (context-files context) for index from 1
-        do (format stream "~3D  ~A~%" index (relative-namestring context file)))
-  (values))
-
-(defmethod list-components ((context context) &optional (stream *standard-output*))
-  (list-files context stream))
-
 (defun file-size (pathname)
   (with-open-file (stream pathname :direction :input :element-type '(unsigned-byte 8))
     (file-length stream)))
@@ -104,27 +75,6 @@
   (cond ((>= count (* 1024 1024)) (format nil "~,2F MiB" (/ count 1024.0 1024.0)))
         ((>= count 1024) (format nil "~,2F KiB" (/ count 1024.0)))
         (t (format nil "~D bytes" count))))
-
-(defmethod context-summary ((context context) &optional (stream *standard-output*))
-  (format stream "Context~%Root:   ~A~%Files:  ~D~%Size:   ~A~%Chars:  ~:D~%Tokens: ~:D (estimated)~%"
-          (context-root context)
-          (length (context-files context))
-          (format-byte-count (context-size context))
-          (context-character-count context)
-          (context-token-count context))
-  (values))
-
-(defmethod render-file ((context context) file &optional (stream *standard-output*))
-  (format stream "~%======================================================================~%FILE: ~A~%======================================================================~%~%"
-          (relative-namestring context file))
-  (with-open-file (input file :direction :input :external-format :utf-8)
-    (uiop:copy-stream-to-stream input stream))
-  (terpri stream)
-  (values))
-
-(defmethod render-context ((context context) &optional (stream *standard-output*))
-  (dolist (file (context-files context)) (render-file context file stream))
-  (values))
 
 (defun context-string (context)
   (with-output-to-string (stream) (render-context context stream)))

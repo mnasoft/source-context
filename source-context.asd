@@ -6,6 +6,14 @@
   :depends-on ("cl-ppcre")
   :serial t
   :components
-  ((:file "src/package")
-   (:file "src/context")
-   (:file "src/asdf-context")))
+  ((:module "src"
+    :serial t
+    :components
+    ((:file "package")
+     (:file "generics")
+     (:file "classes")
+     (:file "context")
+     (:file "asdf-context")
+     (:file "methods")))))
+
+
