@@ -84,6 +84,19 @@ git clone <repository-url> source-context
    :regexp "\\.(lisp|asd|org)$")
 #+end_src
 
+#+begin_src lisp
+  (defparameter *ctx*
+    (source-context:make-context
+     #p"~/elisp/")) 
+
+  (source-context:source-context
+   ,*ctx*
+   :regexp "\\.(el|org)$")
+#+end_src
+
+#+RESULTS:
+: #<SOURCE-CONTEXT:CONTEXT /home/mna/elisp/ files: 65 size: 153.00 KiB {12254123C3}>
+
 Исключения можно задавать при создании:
 
 #+begin_src lisp
@@ -125,40 +138,42 @@ git clone <repository-url> source-context
 :   4.19 KiB  src/asdf-context.lisp {1225209AA3}>
 
 * Просмотр контекста
-
-Краткая сводка:
+*** Краткая сводка:
 
 #+begin_src lisp :var file="context-summary.txt" dir="./generated/" :results output
   (source-context:context-summary *ctx*)
 #+end_src
 
 #+RESULTS:
-: ASDF context
-: System: source-context
-: Root:   /home/mna/quicklisp/local-projects/LLM/source-context/
-: ASD:    source-context.asd
-: Files:  3
-: Size:   10.23 KiB
+: Context
+: Root:   /home/mna/elisp/
+: Files:  65
+: Size:   153.00 KiB
+: Chars:  139,832
+: Tokens: 34,958 (estimated)
 
-Список итоговых файлов:
+*** Список итоговых файлов:
 
 #+begin_src lisp
 (source-context:list-files *ctx*)
 #+end_src
 
-Дерево компонентов ASDF:
+*** Дерево компонентов ASDF:
 
 #+begin_src lisp
 (source-context:list-components *ctx*)
 #+end_src
 
-Полный текст контекста:
+*** Полный текст контекста:
 
 #+begin_src lisp
 (source-context:render-context *ctx*)
 #+end_src
 
-Получение строки:
+#+RESULTS:
+: ; No value
+
+*** Получение строки:
 
 #+begin_src lisp
 (defparameter *context-text*
