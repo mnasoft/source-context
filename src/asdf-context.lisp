@@ -1,9 +1,13 @@
 (in-package #:source-context)
 
 (defun make-asdf-context (system &key (include-asd-p t)
-                                      (exclude-directories '(".git" "generated")) exclude-files)
-  (make-instance 'asdf-context :system system :include-asd-p include-asd-p
-                 :exclude-directories exclude-directories :exclude-files exclude-files))
+                                      (exclude-directories '(".git" "generated"))
+                                      exclude-files)
+  (make-instance 'asdf-context
+                 :system system
+                 :include-asd-p include-asd-p
+                 :exclude-directories exclude-directories
+                 :exclude-files exclude-files))
 
 (defun print-asdf-component (component root stream depth)
   (let ((pathname (ignore-errors (asdf:component-pathname component)))

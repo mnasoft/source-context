@@ -90,3 +90,12 @@
 (defmethod render-context ((context context) &optional (stream *standard-output*))
   (dolist (file (context-files context)) (render-file context file stream))
   (values))
+
+(defmethod write-context ((context context) pathname)
+  (with-open-file (stream pathname
+                          :direction :output
+                          :if-exists :supersede
+                          :if-does-not-exist :create
+                          :external-format :utf-8)
+    (render-context context stream))
+  pathname)

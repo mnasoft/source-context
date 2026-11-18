@@ -78,9 +78,3 @@
 
 (defun context-string (context)
   (with-output-to-string (stream) (render-context context stream)))
-
-(defun write-context (context pathname)
-  (with-open-file (stream pathname :direction :output :if-exists :supersede
-                                  :if-does-not-exist :create :external-format :utf-8)
-    (render-context context stream))
-  pathname)

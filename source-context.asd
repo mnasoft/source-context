@@ -1,6 +1,6 @@
 (defsystem "source-context"
   :description "Build and inspect source contexts for LLMs."
-  :version "0.1.1"
+  :version "0.1.2"
   :author "Микола"
   :license "MIT"
   :depends-on ("cl-ppcre")
@@ -13,7 +13,6 @@
      (:file "generics")
      (:file "classes")
      (:file "context")
+     ;;(:file "context--01")
      (:file "asdf-context")
      (:file "methods")))))
-
-
