@@ -1,9 +1,10 @@
+(in-package #:cl-user)
+
 (defpackage #:source-context
   (:use #:cl)
   (:documentation
    "Tools for building, inspecting, and rendering source-code contexts for LLMs.")
   (:export
-
    ;; Classes
    #:context
    #:asdf-context
@@ -15,11 +16,14 @@
    ;; Context accessors
    #:context-root
    #:context-files
+   #:context-exclude-directories
+   #:context-exclude-files
 
    ;; ASDF context accessors
    #:context-system
    #:context-system-name
    #:context-asd-file
+   #:context-include-asd-p
 
    ;; Context modification
    #:add-file
@@ -39,8 +43,9 @@
    #:write-context
 
    ;; Statistics
+   #:context-size
    #:context-character-count
    #:context-token-count
    #:*characters-per-token*))
 
-(in-package :source-context)
+(in-package #:source-context)

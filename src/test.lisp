@@ -6,17 +6,17 @@
     (source-context:make-context
      #p"~/quicklisp/local-projects/LLM/source-context/"))
 
-(source-context:source-context
-   *ctx*
-   :regexp "\\.(lisp|asd)$")
+(source-context:source-context *ctx* :regexp "\\.(lisp|asd)$")
 
 (render-context *ctx*)
 
-(in-package :source-context)
+(write-context *ctx* "~/Downloads/source-context-root.txt")
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defparameter *asdf-ctx*
     (make-asdf-context "source-context"))
 
-(render-context *asdf-ctx*)
+(write-context *asdf-ctx* "~/Downloads/source-context.txt")
 
-(write-context *asdf-ctx* "~/Downloads/1234.txt")
+(render-context *asdf-ctx*)
