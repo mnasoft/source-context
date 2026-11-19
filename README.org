@@ -1,8 +1,8 @@
 #+TITLE: source-context
 #+AUTHOR: Микола
 #+LANGUAGE: ru
-
-* source-context
+ 
+* Введение
 
 Common Lisp утилита для формирования и интерактивного просмотра
 контекста проекта для LLM.
@@ -73,37 +73,43 @@ git clone <repository-url> source-context
 #+end_src
 
 * Обычный контекст
+A collection of source files rooted at a common directory.
 
+CONTEXT stores the files selected for inclusion and provides the base
+representation used for listing, summarizing, and rendering source
+content.
+
+Files may be added, removed, or collected recursively after the context
+has been created.
+
+#+caption: Создание экземпяра класса context.
 #+begin_src lisp
   (defparameter *ctx*
     (source-context:make-context
      #p"~/quicklisp/local-projects/LLM/source-context/")) 
 
   (source-context:source-context
-   ,*ctx*
-   :regexp "\\.(lisp|asd|org)$")
+   ,*ctx* :regexp "\\.(lisp|asd|org)$")
+
+  (source-context:render-context *ctx*)
 #+end_src
 
+#+caption: Добаление в экземпяр класса context файлов.
 #+begin_src lisp
-  (defparameter *ctx*
-    (source-context:make-context
-     #p"~/elisp/")) 
-
-  (source-context:source-context
+    (source-context:source-context
    ,*ctx*
-   :regexp "\\.(el|org)$")
+   :regexp "\\.(lisp|asd|org)$")
 #+end_src
 
 #+RESULTS:
 : #<SOURCE-CONTEXT:CONTEXT /home/mna/elisp/ files: 65 size: 153.00 KiB {12254123C3}>
 
-Исключения можно задавать при создании:
-
+#+caption: Исключения можно задавать при создании
 #+begin_src lisp
-(source-context:make-context
- #p"~/common-lisp/acad/dxf/"
- :exclude-directories '(".git" "generated" "build")
- :exclude-files '("-generated\\.lisp$" "/test/"))
+  (source-context:make-context
+   #p"~/common-lisp/acad/dxf/"
+   :exclude-directories '(".git" "generated" "build")
+   :exclude-files '("-generated\\.lisp$" "/test/"))
 #+end_src
 
 * ASDF context
@@ -313,18 +319,3 @@ tree -a \
 #+end_src
 
 #+RESULTS:
-#+begin_example
-.
-├── .gitignore
-├── README.org
-├── README.output
-│   └── source-context.txt
-├── source-context.asd
-├── source-context.txt
-└── src
-    ├── asdf-context.lisp
-    ├── context.lisp
-    └── package.lisp
-
-3 directories, 8 files
-#+end_example
