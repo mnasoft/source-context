@@ -22,3 +22,13 @@
     (when (typep component 'asdf:parent-component)
       (dolist (child (asdf:component-children component))
         (print-asdf-component child root stream (1+ depth))))))
+
+(defun collect-asdf-source-files (component)
+  (labels ((walk (component)
+             (cond ((typep component 'asdf:source-file)
+                    (let ((pathname (asdf:component-pathname component)))
+                      (if pathname (list pathname) nil)))
+                   ((typep component 'asdf:parent-component)
+                    (mapcan #'walk (asdf:component-children component)))
+                   (t nil))))
+    (walk component)))

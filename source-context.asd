@@ -1,6 +1,6 @@
 (defsystem "source-context"
   :description "Build and inspect source contexts for LLMs."
-  :version "0.1.2"
+  :version "0.1.3"
   :author "Микола"
   :license "MIT"
   :depends-on ("cl-ppcre")
