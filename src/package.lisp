@@ -2,6 +2,7 @@
 
 (defpackage #:source-context
   (:use #:cl)
+  (:nicknames "SC")
   (:documentation
    "Tools for building, inspecting, and rendering source-code contexts for LLMs.")
   (:export
