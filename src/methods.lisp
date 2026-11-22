@@ -91,11 +91,40 @@
   (dolist (file (context-files context)) (render-file context file stream))
   (values))
 
-(defmethod write-context ((context context) pathname)
-  (with-open-file (stream pathname
-                          :direction :output
-                          :if-exists :supersede
-                          :if-does-not-exist :create
-                          :external-format :utf-8)
-    (render-context context stream))
-  pathname)
+(defmethod write-context ((context context) &optional pathname)
+  (let ((pathname (or pathname
+                      (default-context-pathname context))))
+    (ensure-directories-exist pathname)
+    (with-open-file (stream pathname
+                            :direction :output
+                            :if-exists :supersede
+                            :if-does-not-exist :create
+                            :external-format :utf-8)
+      (render-context context stream))
+    pathname))
+
+(defmethod context-name ((context context))
+  (car (last (pathname-directory (context-root context)))))
+
+(defmethod context-name ((context asdf-context))
+  (context-system-name context))
+
+(defun default-context-pathname (context)
+  (merge-pathnames
+   (make-pathname :name (context-name context)
+                  :type "txt")
+   #p"~/LLM/"))
+
+(defmethod make-and-write-context ((class (eql 'asdf-context))
+                                   system
+                                   &optional pathname)
+  (let ((context (make-asdf-context system)))
+    (write-context context pathname)
+    context))
+
+(defmethod make-and-write-context ((class (eql 'git-context))
+                                   pathname
+                                   &optional output-pathname)
+  (let ((context (make-git-context pathname)))
+    (write-context context output-pathname)
+    context))

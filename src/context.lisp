@@ -34,6 +34,12 @@
   context)
 
 (defun source-context (context &key (regexp ".*"))
+  "
+ @b(Пример использования:)
+@begin[lang=lisp](code)
+  (source-context context :regexp \"\\\\.(lisp|asd|org)$\")
+@end(code)
+"
   (labels ((walk (directory)
              (dolist (file (uiop:directory-files directory))
                (when (and (cl-ppcre:scan regexp (relative-namestring context file))

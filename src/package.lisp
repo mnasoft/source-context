@@ -9,10 +9,13 @@
    ;; Classes
    #:context
    #:asdf-context
+   #:git-context
 
    ;; Constructors
    #:make-context
    #:make-asdf-context
+   #:make-git-context
+   #:make-and-write-context
 
    ;; Context accessors
    #:context-root
@@ -36,6 +39,7 @@
    #:list-files
    #:list-components
    #:context-summary
+   #:context-name   
 
    ;; Rendering
    #:render-file
@@ -50,3 +54,5 @@
    #:*characters-per-token*))
 
 (in-package #:source-context)
+
+

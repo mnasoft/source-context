@@ -22,7 +22,20 @@
   (:documentation
    "Write the rendered contents of CONTEXT to STREAM."))
 
-(defgeneric write-context (context pathname)
+(defgeneric write-context (context &optional pathname)
   (:documentation
-   "Write the rendered contents of CONTEXT to the text file designated by PATHNAME.
-The output is suitable for passing the collected source context to an LLM."))
+   "Write the rendered contents of CONTEXT to PATHNAME.
+
+When PATHNAME is omitted, write the context to ~/LLM/<name>.txt,
+where <name> is derived from CONTEXT."))
+
+(defgeneric context-name (context)
+  (:documentation
+   "Return the name used for CONTEXT when constructing default pathnames."))
+
+(defgeneric make-and-write-context (class source &optional pathname)
+  (:documentation
+   "Create a context of CLASS from SOURCE and write it to PATHNAME.
+
+PATHNAME may be omitted, in which case WRITE-CONTEXT determines
+the default output pathname."))
