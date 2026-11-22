@@ -1,43 +1,46 @@
 #+TITLE: source-context
 #+AUTHOR: Микола
 #+LANGUAGE: ru
-  
+
 * Введение
 
-Common Lisp утилита для формирования и интерактивного просмотра
-контекста проекта для LLM.
+=source-context= — Common Lisp утилита для формирования, просмотра
+и сохранения контекста исходного кода для передачи LLM.
 
-Поддерживаются:
-- обычные файловые контексты;
-- специализированные ASDF-контексты.
-  
-По умолчанию исключаются каталоги =.git= и =generated=.
+Поддерживаются три вида контекста:
+
+- =context= — обычный файловый контекст;
+- =asdf-context= — контекст на основе компонентов ASDF-системы;
+- =git-context= — контекст на основе файлов Git-репозитория.
+
+Контекст содержит корневой каталог и набор файлов. Общий интерфейс
+позволяет просматривать состав контекста, вычислять его размер,
+рендерить содержимое и сохранять результат в текстовый файл.
 
 * Зависимости
 
 - ASDF / UIOP
 - CL-PPCRE
-
-#+begin_src lisp
-(ql:quickload :cl-ppcre)
-#+end_src
+- Git — для использования =git-context=
 
 * Установка
+
 ** ~/common-lisp
-*** Разместить проект в стандартном каталоге:
+
+Разместить проект в стандартном каталоге:
 
 #+begin_src shell
 cd ~/common-lisp
 git clone <repository-url> source-context
 #+end_src
 
-*** Загрузить:
+Загрузить систему:
 
 #+begin_src lisp
 (ql:quickload :source-context)
 #+end_src
 
-*** Проверить:
+Проверить:
 
 #+begin_src lisp
 (asdf:find-system :source-context)
@@ -45,8 +48,13 @@ git clone <repository-url> source-context
 
 ** Quicklisp local-projects
 
-Проект также можно разместить в
-=~/quicklisp/local-projects/source-context/= и загрузить:
+Проект можно разместить в:
+
+#+begin_example
+~/quicklisp/local-projects/source-context/
+#+end_example
+
+и загрузить:
 
 #+begin_src lisp
 (ql:quickload :source-context)
@@ -54,7 +62,7 @@ git clone <repository-url> source-context
 
 ** Произвольный каталог
 
-Для дерева =~/local-projects/= создать файл:
+Для дерева =~/local-projects/= можно создать файл:
 
 #+begin_example
 ~/.config/common-lisp/source-registry.conf.d/50-local-projects.conf
@@ -66,244 +74,289 @@ git clone <repository-url> source-context
 (:tree "~/local-projects/")
 #+end_src
 
-После изменения registry в работающем Lisp:
+После изменения source registry в работающем Lisp:
 
 #+begin_src lisp
 (asdf:clear-source-registry)
 #+end_src
 
 * Обычный контекст
-A collection of source files rooted at a common directory.
 
-CONTEXT stores the files selected for inclusion and provides the base
-representation used for listing, summarizing, and rendering source
-content.
+Обычный =context= представляет набор файлов относительно общего
+корневого каталога.
 
-Files may be added, removed, or collected recursively after the context
-has been created.
+Сначала создаётся пустой контекст:
 
-#+caption: Создание экземпяра класса context.
 #+begin_src lisp
-  (defparameter *ctx*
-    (source-context:make-context
-     #p"~/quicklisp/local-projects/LLM/source-context/")) 
-
-  (source-context:source-context
-   ,*ctx* :regexp "\\.(lisp|asd|org)$")
-
-  (source-context:render-context *ctx*)
-#+end_src
-
-#+caption: Добаление в экземпяр класса context файлов.
-#+begin_src lisp
-    (source-context:source-context
-   ,*ctx*
-   :regexp "\\.(lisp|asd|org)$")
-#+end_src
-
-#+RESULTS:
-: #<SOURCE-CONTEXT:CONTEXT /home/mna/elisp/ files: 65 size: 153.00 KiB {12254123C3}>
-
-#+caption: Исключения можно задавать при создании
-#+begin_src lisp
+(defparameter *ctx*
   (source-context:make-context
-   #p"~/common-lisp/acad/dxf/"
-   :exclude-directories '(".git" "generated" "build")
-   :exclude-files '("-generated\\.lisp$" "/test/"))
+   #p"~/quicklisp/local-projects/LLM/source-context/"))
+#+end_src
+
+После этого в него можно собрать файлы по регулярному выражению:
+
+#+begin_src lisp
+(source-context:source-context
+ *ctx*
+ :regexp "\\.(lisp|asd|org)$")
+#+end_src
+
+При рекурсивном сборе обычного файлового контекста по умолчанию
+исключаются каталоги =.git= и =generated=.
+
+Дополнительные исключения можно задать при создании:
+
+#+begin_src lisp
+(source-context:make-context
+ #p"~/common-lisp/acad/dxf/"
+ :exclude-directories '(".git" "generated" "build")
+ :exclude-files '("-generated\\.lisp$" "/test/"))
 #+end_src
 
 * ASDF context
 
-** Для Common Lisp проектов предпочтителен ASDF-контекст:
-:var file="make-asdf-context.txt" dir="./generated/"
-
-#+begin_src lisp 
-  (defparameter *ctx*
-    (source-context:make-asdf-context "source-context"))
-  *ctx*
-#+end_src
-
-#+RESULTS:
-: *CTX*
-
-Сам =.asd= включается по умолчанию. Отключить его:
-
-#+begin_src lisp
-  (defparameter *ctx*
-    (source-context:make-asdf-context "source-context" :include-asd-p nil))
-  ,*ctx*
-#+end_src
-
-#+RESULTS:
-: #<SOURCE-CONTEXT:ASDF-CONTEXT 
-: System: source-context
-: Root: /home/mna/quicklisp/local-projects/LLM/source-context/
-: Files: 3, size: 10.23 KiB
-:   518 bytes  src/package.lisp
-:   5.54 KiB  src/context.lisp
-:   4.19 KiB  src/asdf-context.lisp {1225209AA3}>
-
-* Просмотр контекста
-*** Краткая сводка:
-
-#+begin_src lisp :var file="context-summary.txt" dir="./generated/" :results output
-  (source-context:context-summary *ctx*)
-#+end_src
-
-#+RESULTS:
-: Context
-: Root:   /home/mna/elisp/
-: Files:  65
-: Size:   153.00 KiB
-: Chars:  139,832
-: Tokens: 34,958 (estimated)
-
-*** Список итоговых файлов:
-
-#+begin_src lisp
-(source-context:list-files *ctx*)
-#+end_src
-
-*** Дерево компонентов ASDF:
-
-#+begin_src lisp
-(source-context:list-components *ctx*)
-#+end_src
-
-*** Полный текст контекста:
-
-#+begin_src lisp
-(source-context:render-context *ctx*)
-#+end_src
-
-#+RESULTS:
-: ; No value
-
-*** Получение строки:
-
-#+begin_src lisp
-(defparameter *context-text*
-  (source-context:context-string *ctx*))
-#+end_src
-
-* Изменение контекста
-
-#+begin_src lisp
-(source-context:add-file *ctx* #p"~/common-lisp/acad/dxf/README.org")
-(source-context:remove-file *ctx* #p"~/common-lisp/acad/dxf/test/test-dxf.lisp")
-(source-context:clear-context *ctx*)
-#+end_src
-
-* Сохранение
-
-#+begin_src lisp
-(source-context:write-context *ctx* #p"~/Downloads/dxf-context.txt")
-#+end_src
-
-* Типичная работа в SLY
-
-** Сначала создаём контекст интересующей ASDF-системы:
+Для Common Lisp проекта контекст можно сформировать непосредственно
+из дерева компонентов ASDF-системы:
 
 #+begin_src lisp
 (defparameter *ctx*
   (source-context:make-asdf-context "source-context"))
 #+end_src
 
-#+RESULTS:
-: *CTX*
+В контекст включаются исходные файлы, найденные в дереве компонентов
+ASDF.
 
-** Сам объект уже содержит краткую информацию о сформированном контексте:
+Файл определения системы =.asd= включается по умолчанию.
+
+Отключить его можно параметром =:include-asd-p=:
 
 #+begin_src lisp
-*ctx*
+(defparameter *ctx*
+  (source-context:make-asdf-context
+   "source-context"
+   :include-asd-p nil))
 #+end_src
 
-#+RESULTS:
-: #<SOURCE-CONTEXT:ASDF-CONTEXT 
-: System: source-context
-: Root: /home/mna/quicklisp/local-projects/LLM/source-context/
-: Files: 4, size: 10.51 KiB
-:   285 bytes  source-context.asd
-:   518 bytes  src/package.lisp
-:   5.54 KiB  src/context.lisp
-:   4.19 KiB  src/asdf-context.lisp {121D0134F3}>
+Имя ASDF-системы можно получить через:
 
-** При необходимости можно отдельно посмотреть структуру ASDF-системы:
-
-#+begin_src lisp :results output
-  (source-context:list-components *ctx*)
+#+begin_src lisp
+(source-context:context-system-name *ctx*)
 #+end_src
 
-#+RESULTS:
-: [system] source-context
-:   [file] src/package  -> src/package.lisp
-:   [file] src/context  -> src/context.lisp
-:   [file] src/asdf-context  -> src/asdf-context.lisp
+Путь к файлу определения системы:
 
-** или итоговый список файлов:
+#+begin_src lisp
+(source-context:context-asd-file *ctx*)
+#+end_src
 
-#+begin_src lisp :results output
+Структуру компонентов ASDF можно посмотреть:
+
+#+begin_src lisp
+(source-context:list-components *ctx*)
+#+end_src
+
+* Git context
+
+=git-context= формируется на основе файлов, отслеживаемых Git.
+
+Создать контекст репозитория:
+
+#+begin_src lisp
+(defparameter *ctx*
+  (source-context:make-git-context
+   #p"~/quicklisp/local-projects/LLM/source-context/"))
+#+end_src
+
+В =make-git-context= необязательно передавать непосредственно корень
+репозитория.
+
+Можно указать любой каталог внутри рабочего дерева:
+
+#+begin_src lisp
+(defparameter *ctx*
+  (source-context:make-git-context
+   #p"~/quicklisp/local-projects/LLM/source-context/src/"))
+#+end_src
+
+Можно также передать отдельный файл:
+
+#+begin_src lisp
+(defparameter *ctx*
+  (source-context:make-git-context
+   #p"~/quicklisp/local-projects/LLM/source-context/src/context.lisp"))
+#+end_src
+
+Корень Git-репозитория определяется автоматически.
+
+Проверить его можно через:
+
+#+begin_src lisp
+(source-context:context-root *ctx*)
+#+end_src
+
+Список файлов =git-context= формируется из файлов, возвращаемых
+=git ls-files=.
+
+Таким образом, =git-context= представляет состояние файлов,
+отслеживаемых Git, а не результат обычного рекурсивного обхода
+каталога.
+
+* Просмотр контекста
+
+Все виды контекста используют общий интерфейс.
+
+** Корневой каталог
+
+#+begin_src lisp
+(source-context:context-root *ctx*)
+#+end_src
+
+** Имя контекста
+
+#+begin_src lisp
+(source-context:context-name *ctx*)
+#+end_src
+
+Для обычного =context= и =git-context= имя определяется по имени
+корневого каталога.
+
+Для =asdf-context= используется имя ASDF-системы.
+
+** Список файлов
+
+#+begin_src lisp
 (source-context:list-files *ctx*)
 #+end_src
 
-#+RESULTS:
-:   1  ASD  source-context.asd
-:   2       src/package.lisp
-:   3       src/context.lisp
-:   4       src/asdf-context.lisp
-
-** Контекст можно интерактивно изменить:
+** Краткая сводка
 
 #+begin_src lisp
-(source-context:add-file *ctx* #p"README.org")
+(source-context:context-summary *ctx*)
+#+end_src
 
+Сводка обычного контекста содержит количество файлов, размер,
+число символов и примерную оценку количества токенов.
+
+** Размер контекста
+
+#+begin_src lisp
+(source-context:context-size *ctx*)
+#+end_src
+
+** Количество символов
+
+#+begin_src lisp
+(source-context:context-character-count *ctx*)
+#+end_src
+
+** Оценка количества токенов
+
+#+begin_src lisp
+(source-context:context-token-count *ctx*)
+#+end_src
+
+Оценка использует значение =*characters-per-token*=:
+
+#+begin_src lisp
+source-context:*characters-per-token*
+#+end_src
+
+* Изменение контекста
+
+После создания набор файлов контекста можно изменять вручную.
+
+Добавить файл:
+
+#+begin_src lisp
+(source-context:add-file
+ *ctx*
+ #p"~/common-lisp/acad/dxf/README.org")
+#+end_src
+
+Удалить файл:
+
+#+begin_src lisp
 (source-context:remove-file
  *ctx*
- #p"src/some-file.lisp")
+ #p"~/common-lisp/acad/dxf/test/test-dxf.lisp")
 #+end_src
 
-#+RESULTS:
-: #<SOURCE-CONTEXT:ASDF-CONTEXT 
-: System: source-context
-: Root: /home/mna/quicklisp/local-projects/LLM/source-context/
-: Files: 5, size: 16.40 KiB
-:   285 bytes  source-context.asd
-:   518 bytes  src/package.lisp
-:   5.54 KiB  src/context.lisp
-:   4.19 KiB  src/asdf-context.lisp
-:   5.89 KiB  README.org {121D0134F3}>
+Очистить список файлов:
 
-** После изменения достаточно снова вычислить:
-
-#+begin_src lisp 
-  ,*ctx*
+#+begin_src lisp
+(source-context:clear-context *ctx*)
 #+end_src
 
-#+RESULTS:
-: #<SOURCE-CONTEXT:ASDF-CONTEXT 
-: System: source-context
-: Root: /home/mna/quicklisp/local-projects/LLM/source-context/
-: Files: 5, size: 17.08 KiB
-:   285 bytes  source-context.asd
-:   518 bytes  src/package.lisp
-:   5.54 KiB  src/context.lisp
-:   4.19 KiB  src/asdf-context.lisp
-:   6.57 KiB  README.org {121D0134F3}>
+Эти операции возвращают объект контекста, что позволяет продолжать
+интерактивную работу с ним.
 
+* Рендеринг
 
-** Полный текст сформированного контекста можно проверить непосредственно из SLY:
+** Отдельный файл
 
-#+begin_src lisp :var file="source-context.txt" dir="./generated/" 
-  (let ((f-name (merge-pathnames file (pathname dir))))
-    (source-context:write-context *ctx* f-name)
-    (list (concatenate 'string "[[" (namestring f-name) "]]")))
+#+begin_src lisp
+(source-context:render-file
+ *ctx*
+ (first (source-context:context-files *ctx*)))
 #+end_src
 
-#+begin_src lisp :results output
+** Весь контекст
+
+#+begin_src lisp
 (source-context:render-context *ctx*)
 #+end_src
 
-Когда состав контекста устраивает, сохраняем его:
+Каждый файл выводится вместе с его относительным именем.
+
+** Получение контекста как строки
+
+#+begin_src lisp
+(defparameter *context-text*
+  (source-context:context-string *ctx*))
+#+end_src
+
+Полученную строку можно использовать непосредственно при работе с LLM
+или другими программами.
+
+* Сохранение
+
+Контекст можно сохранить в текстовый файл функцией =write-context=.
+
+** Путь по умолчанию
+
+Если pathname не указан:
+
+#+begin_src lisp
+(source-context:write-context *ctx*)
+#+end_src
+
+результат сохраняется в:
+
+#+begin_example
+~/LLM/<context-name>.txt
+#+end_example
+
+Например, для ASDF-системы =source-context=:
+
+#+begin_src lisp
+(defparameter *ctx*
+  (source-context:make-asdf-context "source-context"))
+
+(source-context:write-context *ctx*)
+#+end_src
+
+результирующий файл:
+
+#+begin_example
+~/LLM/source-context.txt
+#+end_example
+
+Для обычного и Git-контекста имя файла определяется именем корневого
+каталога.
+
+** Явный pathname
+
+Путь можно указать явно:
 
 #+begin_src lisp
 (source-context:write-context
@@ -311,11 +364,252 @@ has been created.
  #p"~/Downloads/source-context.txt")
 #+end_src
 
-* Структура проекта
+В этом случае переданный pathname используется вместо пути по
+умолчанию.
 
-#+begin_src sh :results output :exports results :dir .
-tree -a \
-     -I '.git|.#*|*.fasl|*.orig|*~'
+* Создание и сохранение одной операцией
+
+Для =asdf-context= и =git-context= определена обобщённая функция
+=make-and-write-context=.
+
+Она создаёт специализированный контекст, записывает его в текстовый
+файл и возвращает созданный объект.
+
+** ASDF context
+
+#+begin_src lisp
+(defparameter *ctx*
+  (source-context:make-and-write-context
+   'source-context:asdf-context
+   "source-context"))
 #+end_src
 
-#+RESULTS:
+Если pathname результата не указан, будет использован:
+
+#+begin_example
+~/LLM/source-context.txt
+#+end_example
+
+Явный pathname можно передать третьим аргументом:
+
+#+begin_src lisp
+(source-context:make-and-write-context
+ 'source-context:asdf-context
+ "source-context"
+ #p"~/Downloads/source-context.txt")
+#+end_src
+
+** Git context
+
+#+begin_src lisp
+(defparameter *ctx*
+  (source-context:make-and-write-context
+   'source-context:git-context
+   #p"~/quicklisp/local-projects/LLM/source-context/"))
+#+end_src
+
+Так же, как и для =make-git-context=, можно указать путь внутри
+репозитория:
+
+#+begin_src lisp
+(defparameter *ctx*
+  (source-context:make-and-write-context
+   'source-context:git-context
+   #p"~/quicklisp/local-projects/LLM/source-context/src/"))
+#+end_src
+
+Результирующий объект остаётся доступным для дальнейшей работы:
+
+#+begin_src lisp
+(source-context:list-files *ctx*)
+(source-context:context-summary *ctx*)
+#+end_src
+
+=make-and-write-context= специализирован только для =asdf-context=
+и =git-context=.
+
+* Типичная работа в SLY
+
+** ASDF-проект
+
+Создать контекст:
+
+#+begin_src lisp
+(defparameter *ctx*
+  (source-context:make-asdf-context "source-context"))
+#+end_src
+
+Посмотреть объект:
+
+#+begin_src lisp
+*ctx*
+#+end_src
+
+Посмотреть компоненты системы:
+
+#+begin_src lisp
+(source-context:list-components *ctx*)
+#+end_src
+
+Посмотреть итоговый набор файлов:
+
+#+begin_src lisp
+(source-context:list-files *ctx*)
+#+end_src
+
+Получить сводку:
+
+#+begin_src lisp
+(source-context:context-summary *ctx*)
+#+end_src
+
+При необходимости изменить состав:
+
+#+begin_src lisp
+(source-context:add-file *ctx* #p"README.org")
+#+end_src
+
+Сохранить:
+
+#+begin_src lisp
+(source-context:write-context *ctx*)
+#+end_src
+
+** Git-репозиторий
+
+Для случая, когда нужен весь набор отслеживаемых Git файлов:
+
+#+begin_src lisp
+(defparameter *ctx*
+  (source-context:make-git-context
+   #p"~/quicklisp/local-projects/LLM/source-context/"))
+#+end_src
+
+Проверить состав:
+
+#+begin_src lisp
+(source-context:list-files *ctx*)
+#+end_src
+
+И сохранить:
+
+#+begin_src lisp
+(source-context:write-context *ctx*)
+#+end_src
+
+** Короткий вариант
+
+Если промежуточная проверка состава не требуется, ASDF-контекст можно
+сформировать и сохранить одной формой:
+
+#+begin_src lisp
+(source-context:make-and-write-context
+ 'source-context:asdf-context
+ "source-context")
+#+end_src
+
+То же для Git:
+
+#+begin_src lisp
+(source-context:make-and-write-context
+ 'source-context:git-context
+ #p"~/quicklisp/local-projects/LLM/source-context/")
+#+end_src
+
+* Структура проекта
+
+Основные файлы системы:
+
+#+begin_example
+source-context.asd
+README.org
+src/
+  package.lisp
+  generics.lisp
+  classes.lisp
+  context.lisp
+  asdf-context.lisp
+  git-context.lisp
+  methods.lisp
+#+end_example
+
+=package.lisp=
+содержит определение пакета и публичного API.
+
+=generics.lisp=
+содержит определения обобщённых функций.
+
+=classes.lisp=
+содержит классы =context=, =asdf-context= и =git-context=.
+
+=context.lisp=
+содержит базовые операции над файловым контекстом и функции
+статистики.
+
+=asdf-context.lisp=
+содержит формирование контекста на основе дерева компонентов ASDF.
+
+=git-context.lisp=
+содержит определение корня Git-репозитория и формирование списка
+отслеживаемых файлов.
+
+=methods.lisp=
+содержит методы просмотра, рендеринга, сохранения и специализированные
+методы различных типов контекста.
+
+* Основной API
+
+** Классы
+
+- =context=
+- =asdf-context=
+- =git-context=
+
+** Конструкторы
+
+- =make-context=
+- =make-asdf-context=
+- =make-git-context=
+- =make-and-write-context=
+
+** Доступ к контексту
+
+- =context-root=
+- =context-files=
+- =context-exclude-directories=
+- =context-exclude-files=
+
+** ASDF context
+
+- =context-system=
+- =context-system-name=
+- =context-asd-file=
+- =context-include-asd-p=
+
+** Изменение
+
+- =add-file=
+- =remove-file=
+- =clear-context=
+- =source-context=
+
+** Просмотр
+
+- =context-name=
+- =list-files=
+- =list-components=
+- =context-summary=
+
+** Рендеринг и сохранение
+
+- =render-file=
+- =render-context=
+- =context-string=
+- =write-context=
+
+** Статистика
+
+- =context-size=
+- =context-character-count=
+- =context-token-count=
+- =*characters-per-token*=
